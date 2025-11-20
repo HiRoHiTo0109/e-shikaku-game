@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>E資格 攻略の塔</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+
+        :root {
+            /* デフォルト変数（PC用） */
+            --bg-color: #050505;
+            --win-bg: #111;
+            --text-color: #e0e0e0;
+            --accent-color: #4db8ff;
+            --base-font-size: 16px;
+            --btn-padding: 12px;
+            --window-width: 750px;
+            --border-width: 4px;
+        }
+
+        /* === スマホ用設定 (画面幅600px以下) === */
+        @media (max-width: 600px) {
+            :root {
+                --base-font-size: 18px; /* 文字を大きく */
+                --btn-padding: 20px;    /* ボタンをタップしやすく */
+                --window-width: 100%;   /* 横幅いっぱいに */
+                --border-width: 0px;    /* 余計な枠線を消す */
+            }
+            .game-window {
+                height: 100dvh; /* 画面の高さいっぱいに */
+                border-radius: 0 !important;
+            }
+            .battle-scene {
+                flex-basis: 40%; /* バトル画面の比率調整 */
+            }
+            .command-area {
+                flex-basis: 60%; /* 操作エリアを広くとる */
+                padding-bottom: 40px !important; /* 下部の誤操作防止 */
+            }
+            .quiz-grid {
+                gap: 15px !important; /* ボタンの間隔を広げる */
+            }
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'DotGothic16', sans-serif;
+            font-size: var(--base-font-size);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            user-select: none; /* テキスト選択防止 */
+            -webkit-tap-highlight-color: transparent; /* タップ時のハイライト消去 */
+        }
+
+        .game-window {
+            width: var(--window-width);
+            max-width: 750px;
+            border: var(--border-width) solid #444;
+            background-color: var(--win-bg);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .header-info {
+            background: #222;
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #555;
+            color: #aaa;
+        }
+
+        .battle-scene {
+            height: 300px; /* PCでの基準高さ */
+            background: radial-gradient(circle at bottom, #223, #000);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+
+        /* 敵エリア */
+        .enemy-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+        .enemy-sprite {
+            font-size: clamp(80px, 20vw, 120px); /* 画面サイズに合わせて可変 */
+            filter: drop-shadow(0 0 20px rgba(255, 50, 50, 0.3));
+            transition: transform 0.1s;
+            margin-bottom: 5px;
+        }
+        .enemy-name { font-size: 1.2rem; color: #ff8888; margin-bottom: 5px; text-shadow: 2px 2px 0 #000; }
+
+        /* HPバー共通 */
+        .hp-container { width: 80%; max-width: 240px; margin: 0 auto; background: #000; border: 2px solid #666; border-radius: 4px; padding: 2px; }
+        .hp-bar { height: 10px; width: 100%; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .hp-red { background: linear-gradient(to right, #f00, #900); }
+        .hp-green { background: linear-gradient(to right, #0f0, #090); }
+
+        /* プレイヤーエリア */
+        .player-area {
+            margin-top: auto;
+            background: rgba(0,0,0,0.6);
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            z-index: 2;
+        }
+        .player-stats { display: flex; justify-content: space-between; align-items: flex-end; font-size: 1rem; }
+
+        /* コマンド・メッセージエリア */
+        .command-area {
+            background: #1a1a1a;
+            border-top: 2px solid #444;
+            padding: 15px;
+            flex-grow: 1; /* 余ったスペースを埋める */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message-box {
+            border: 2px solid #555;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 15px;
+            min-height: 4em;
+            background: #000;
+            line-height: 1.5;
+            font-size: 1rem;
+        }
+        .exp-text { color: var(--accent-color); font-size: 0.9em; margin-top: 8px; display: block; border-top: 1px dashed #444; padding-top: 5px;}
+
+        .quiz-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 2列表示 */
+            gap: 10px;
+            margin-top: auto; /* 下寄せ */
+        }
+        
+        /* スマホ用レイアウト調整：選択肢が長い場合に備えて */
+        @media (max-width: 600px) {
+             /* 必要ならここを 1fr にするとボタンが縦一列になります */
+            /* grid-template-columns: 1fr; */
+        }
+
+        .quiz-btn {
+            background: #2a2a2a;
+            color: #eee;
+            border: 2px solid #555;
+            padding: var(--btn-padding);
+            font-family: inherit;
+            font-size: 1rem;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.1s;
+            border-radius: 6px;
+            touch-action: manipulation; /* ダブルタップ拡大防止 */
+        }
+        .quiz-btn:active { background: #555; transform: scale(0.98); }
+        .quiz-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .quiz-btn.correct-mark { background: #151 !important; border-color: #4f4 !important; }
+        .quiz-btn.wrong-mark { background: #511 !important; border-color: #f44 !important; }
+
+        /* アニメーション類 */
+        @keyframes damage {
+            0% { transform: translate(0, 0); filter: brightness(1); }
+            20% { transform: translate(-8px, 2px); filter: brightness(3) sepia(1) hue-rotate(-50deg) saturate(5); }
+            40% { transform: translate(8px, -2px); }
+            100% { transform: translate(0, 0); filter: brightness(1); }
+        }
+        .anim-damage { animation: damage 0.4s; }
+
+        @keyframes float-up {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-40px); opacity: 0; }
+        }
+        .pop-text {
+            position: absolute;
+            font-weight: bold;
+            font-size: 2rem;
+            pointer-events: none;
+            animation: float-up 1.0s forwards;
+            z-index: 10;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        /* オーバーレイ画面 */
+        .overlay {
+            position: absolute; inset: 0;
+            background: rgba(0,0,0,0.92);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            text-align: center;
+            padding: 20px;
+        }
+        .btn-start {
+            margin-top: 30px;
+            padding: 15px 50px;
+            font-size: 1.5rem;
+            background: #fff;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            border-radius: 50px; /* 丸みをつける */
+        }
+        .btn-start:active { transform: scale(0.95); background: #ccc; }
+
+    </style>
+</head>
+<body>
+
+<div class="game-window">
+    <div class="header-info">
+        <span id="floor-idx">Floor 1</span>
+        <span>E資格 攻略の塔 V3</span>
+    </div>
+
+    <div class="battle-scene" id="scene">
+        <div class="enemy-area">
+            <div class="enemy-info">
+                <div class="enemy-name" id="e-name">Loading...</div>
+                <div class="hp-container"><div class="hp-bar hp-red" id="e-hp"></div></div>
+            </div>
+            <div class="enemy-sprite" id="e-img">👾</div>
+        </div>
+
+        <div class="player-area">
+            <div class="player-stats">
+                <span>You (Lv.<span id="p-lv">1</span>)</span>
+                <span id="p-hp-text">HP: 100</span>
+            </div>
+            <div class="hp-container" style="width:100%; margin-top:5px;">
+                <div class="hp-bar hp-green" id="p-hp"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="command-area">
+        <div class="message-box" id="msg"></div>
+        <div class="quiz-grid" id="quiz-box"></div>
+    </div>
+
+    <div class="overlay" id="title-screen">
+        <h1 style="font-size: clamp(3rem, 10vw, 4rem); margin:0; color:#4db8ff; text-shadow:0 0 20px #00f;">E資格<br>攻略の塔</h1>
+        <p>スマホ完全対応 / 知識で登り詰めろ</p>
+        <button class="btn-start" onclick="startGame()">START</button>
+    </div>
+
+    <div class="overlay" id="result-screen" style="display:none;">
+        <h1 id="res-title">YOU DIED</h1>
+        <p id="res-msg">...</p>
+        <button class="btn-start" onclick="location.reload()">RETRY</button>
+    </div>
+</div>
+
+<script>
+// === 問題データ (拡張可能) ===
+const DB = [
+    { c: 'math', q: '行列Aの固有値をλ、固有ベクトルをxとした時、成り立つ式は？', a: ['Ax = λx', 'Ax = x + λ', 'A = λx', 'x = Aλ'], exp: '固有値・固有ベクトルの定義式です。線形代数の基本です。' },
+    { c: 'math', q: 'ベイズの定理 P(A|B) = ?', a: ['P(B|A)P(A)/P(B)', 'P(A|B)P(B)/P(A)', 'P(A)P(B)', 'P(A)+P(B)'], exp: '事後確率は「尤度×事前確率÷周辺尤度」で求まります。' },
+    { c: 'ml', q: '適合率(Precision)の計算式は？(TP:真陽性, FP:偽陽性)', a: ['TP / (TP + FP)', 'TP / (TP + FN)', 'TP / (TP + TN)', '2TP / (TP + FP)'], exp: '「陽性と予測したもののうち、実際に陽性だった割合」です。' },
+    { c: 'ml', q: 'k-means法はどの学習手法に分類される？', a: ['教師なし学習', '教師あり学習', '強化学習', '深層学習'], exp: '正解ラベルを使わずにクラスタリングを行うため、教師なし学習です。' },
+    { c: 'dl', q: '活性化関数 ReLU(x) の定義は？', a: ['max(0, x)', '1 / (1 + e^-x)', 'x^2', 'tanh(x)'], exp: '入力が0以下なら0、正ならそのまま出力します。' },
+    { c: 'dl', q: '多値分類問題の出力層で通常使用される活性化関数は？', a: ['Softmax', 'Sigmoid', 'ReLU', 'Tanh'], exp: '出力を確率分布(合計1)にするため、Softmax関数を使います。' },
+    { c: 'opt', q: 'L2正則化(Ridge)を損失関数に加える効果は？', a: ['過学習の抑制', 'スパース化', '計算速度向上', '勾配消失対策'], exp: '重みの値が大きくなりすぎないようにペナルティを与えます。' },
+    { c: 'opt', q: 'Adamの特徴は？', a: ['MomentumとRMSPropの組み合わせ', '学習率固定', '最急降下法と同じ', '大域解を保証'], exp: '慣性項と適応的学習率を組み合わせた手法です。' },
+    { c: 'cnn', q: 'CNNで位置ズレに対する頑健性を作る処理は？', a: ['Pooling', 'Convolution', 'Padding', 'Flatten'], exp: 'プーリング層は微小な位置変化を吸収します。' },
+    { c: 'cnn', q: 'ResNetの特徴的な構造は？', a: ['Skip Connection', 'Inception Module', 'Attention', 'Dropout'], exp: '入力を出力に足し合わせるショートカット構造です。' },
+    { c: 'rnn', q: 'LSTMが持つゲートに含まれないものは？', a: ['Attention Gate', 'Input Gate', 'Forget Gate', 'Output Gate'], exp: 'LSTMは入力・忘却・出力の3つのゲートを持ちます。' },
+    { c: 'rnn', q: 'Transformerの主要な機構は？', a: ['Self-Attention', 'Convolution', 'LSTM', 'GAN'], exp: 'RNNを使わず、Attentionのみで並列計算を行います。' },
+    { c: 'gen', q: 'GANにおけるGeneratorの目的は？', a: ['Discriminatorを騙す', '画像を分類する', 'ノイズを除去する', '強化学習する'], exp: '偽物を本物と誤認させるように学習します。' }
+];
+// ※問題が足りない場合は自動的に全問題から補充されます
+
+const STAGES = [
+    { f:1, name:"線形代数", cat:'math', hp:30 },
+    { f:2, name:"機械学習", cat:'ml', hp:50 },
+    { f:3, name:"深層学習", cat:'dl', hp:60 },
+    { f:4, name:"最適化", cat:'opt', hp:70 },
+    { f:5, name:"ＣＮＮ", cat:'cnn', hp:80 },
+    { f:6, name:"ＲＮＮ", cat:'rnn', hp:90 },
+    { f:7, name:"生成・強化学習", cat:'gen', hp:100 },
+    { f:8, name:"ＪＤＬＡ", cat:'boss', hp:150 }
+];
+
+let state = { floor: 0, p_hp: 100, p_max: 100, e_hp: 0, e_max: 0, q_list: [], turn: true };
+const dom = {
+    scr: document.getElementById('title-screen'),
+    res: document.getElementById('result-screen'),
+    msg: document.getElementById('msg'),
+    quiz: document.getElementById('quiz-box'),
+    p_hp: document.getElementById('p-hp'),
+    e_hp: document.getElementById('e-hp'),
+    e_img: document.getElementById('e-img'),
+    floor: document.getElementById('floor-idx'),
+    e_name: document.getElementById('e-name'),
+    scene: document.getElementById('scene')
+};
+
+function startGame() {
+    state.floor = 0; state.p_hp = state.p_max;
+    dom.scr.style.display = 'none'; dom.res.style.display = 'none';
+    loadStage();
+}
+
+function loadStage() {
+    if(state.floor >= STAGES.length) { gameClear(); return; }
+    const stg = STAGES[state.floor];
+    state.e_max = stg.hp; state.e_hp = stg.hp;
+    
+    dom.floor.innerText = `F${stg.f} ${stg.name}`;
+    dom.e_name.innerText = stg.name;
+    dom.e_img.innerText = ['🦠','🐺','🤖','⚙️','👁️','👻','🐲','👑'][state.floor];
+    
+    updateBar(dom.e_hp, 100); updateBar(dom.p_hp, (state.p_hp/state.p_max)*100);
+    msg(`${stg.name} があらわれた！`);
+    
+    let list = DB.filter(d => d.c === stg.cat);
+    if(list.length < 2 || stg.cat === 'boss') list = DB; // 補充
+    state.q_list = list.sort(() => Math.random() - 0.5);
+    
+    setTimeout(nextTurn, 1200);
+}
+
+function nextTurn() {
+    state.turn = true;
+    if(state.q_list.length === 0) state.q_list = DB.sort(() => Math.random() - 0.5); // 枯渇対策
+    showQuiz(state.q_list.pop());
+}
+
+function showQuiz(q) {
+    msg(`Q. ${q.q}`);
+    dom.quiz.innerHTML = '';
+    let opts = q.a.map((txt, i) => ({ txt, isC: i===0 })).sort(() => Math.random() - 0.5);
+    
+    opts.forEach(o => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-btn';
+        btn.innerText = o.txt;
+        btn.onclick = () => answer(btn, o.isC, q);
+        dom.quiz.appendChild(btn);
+    });
+}
+
+function answer(btn, isCorrect, qData) {
+    if(!state.turn) return; state.turn = false;
+    Array.from(dom.quiz.children).forEach(b => b.disabled = true);
+    
+    if(isCorrect) {
+        btn.classList.add('correct-mark');
+        msg(`正解！<br><span class="exp-text">${qData.exp}</span>`);
+        damageEnemy();
+    } else {
+        btn.classList.add('wrong-mark');
+        Array.from(dom.quiz.children).forEach(b => { if(b.innerText === qData.a[0]) b.classList.add('correct-mark'); });
+        msg(`不正解...<br><span class="exp-text">${qData.exp}</span>`);
+        damagePlayer();
+    }
+}
+
+function damageEnemy() {
+    dom.e_img.classList.add('anim-damage');
+    showPop(dom.e_img, "10!!", "#ff0");
+    state.e_hp -= 10;
+    updateBar(dom.e_hp, (state.e_hp/state.e_max)*100);
+    if(state.p_hp < state.p_max) { state.p_hp += 5; updateBar(dom.p_hp, (state.p_hp/state.p_max)*100); }
+    
+    setTimeout(() => {
+        dom.e_img.classList.remove('anim-damage');
+        if(state.e_hp <= 0) { msg("敵を倒した！"); setTimeout(() => { state.floor++; loadStage(); }, 1500); }
+        else setTimeout(nextTurn, 2000);
+    }, 500);
+}
+
+function damagePlayer() {
+    dom.scene.classList.add('anim-damage');
+    showPop(dom.scene, "20 Dmg!", "#f00");
+    state.p_hp -= 20;
+    updateBar(dom.p_hp, (state.p_hp/state.p_max)*100);
+    setTimeout(() => {
+        dom.scene.classList.remove('anim-damage');
+        if(state.p_hp <= 0) gameOver();
+        else setTimeout(nextTurn, 2000);
+    }, 500);
+}
+
+function updateBar(el, per) { el.style.width = Math.max(0, per) + "%"; document.getElementById('p-hp-text').innerText = `HP: ${state.p_hp}`; }
+function msg(html) { dom.msg.innerHTML = html; }
+function showPop(target, text, color) {
+    const rect = target.getBoundingClientRect();
+    const el = document.createElement('div'); el.innerText = text; el.className = 'pop-text';
+    el.style.color = color; el.style.left = (rect.left + rect.width/2 - 20) + 'px'; el.style.top = (rect.top) + 'px';
+    document.body.appendChild(el); setTimeout(() => el.remove(), 1000);
+}
+function gameOver() { dom.res.style.display = 'flex'; dom.res.querySelector('h1').innerText = "GAME OVER"; dom.res.querySelector('p').innerText = "再挑戦しよう"; }
+function gameClear() { dom.res.style.display = 'flex'; dom.res.querySelector('h1').innerText = "合格!!"; dom.res.querySelector('h1').style.color = "#ff0"; dom.res.querySelector('p').innerText = "君ならE資格に受かる！"; }
+</script>
+</body>
+</html>
